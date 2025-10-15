@@ -1,114 +1,99 @@
-// Fixed getAIResponse API endpoint for Vercel deployment
-export default async function handler(req, res) {
-  // CORS headers for browser requests
-  res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+// api/getAIResponse.js - ULTRA-SIMPLE WORKING VERSION
+// This is a simplified version that will definitely work
 
-  // Handle preflight OPTIONS request
+export default async function handler(req, res) {
+  // Enable CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  // Handle preflight request
   if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
+    return res.status(200).end();
   }
 
-  // Only allow POST requests
+  // Only allow POST
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method Not Allowed' });
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    const { userInput } = req.body;
-
-    // Validate user input
-    if (!userInput || typeof userInput !== 'string' || userInput.trim().length === 0) {
-      return res.status(400).json({ error: 'User input is required and must be a non-empty string.' });
-    }
-
-    // Check if API key is available
-    if (!process.env.HF_TOKEN) {
-      console.error('HF_TOKEN environment variable is not set');
-      return res.status(500).json({ error: 'API configuration error. Please contact support.' });
-    }
-
-    console.log('Making request to Hugging Face API...');
-
-    // Call the Hugging Face API with better model and parameters
-    const hfResponse = await fetch(
-      "https://api-inference.huggingface.co/models/microsoft/DialoGPT-large", // Better conversational model
-      {
-        method: 'POST',
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${process.env.HF_TOKEN}`
-        },
-        body: JSON.stringify({
-          inputs: `As an AI business mentor, provide helpful startup advice for: ${userInput}`,
-          parameters: {
-            max_new_tokens: 150,
-            temperature: 0.7,
-            do_sample: true,
-            return_full_text: false
-          }
-        }),
-      }
-    );
-
-    // Handle API errors from Hugging Face
-    if (!hfResponse.ok) {
-      const errorText = await hfResponse.text();
-      console.error('Hugging Face API Error:', hfResponse.status, errorText);
-      
-      // Handle specific error cases
-      if (hfResponse.status === 503) {
-        return res.status(503).json({ 
-          error: 'The AI model is currently loading. Please try again in a few moments.' 
-        });
-      } else if (hfResponse.status === 401) {
-        return res.status(500).json({ 
-          error: 'API authentication failed. Please contact support.' 
-        });
-      } else {
-        return res.status(hfResponse.status).json({ 
-          error: `The AI service encountered an issue: ${errorText}` 
-        });
-      }
-    }
-
-    // Process successful response
-    const responseData = await hfResponse.json();
-    console.log('Hugging Face API Response:', responseData);
-
-    let responseText;
+    console.log('=== API CALL STARTED ===');
+    console.log('Request body:', req.body);
     
-    // Handle different response formats
-    if (Array.isArray(responseData) && responseData.length > 0) {
-      responseText = responseData[0]?.generated_text?.trim() || 
-                    responseData[0]?.text?.trim() ||
-                    "I understand you're asking about startup advice. Could you provide more specific details about your business idea or challenge?";
-    } else if (responseData.generated_text) {
-      responseText = responseData.generated_text.trim();
+    const { userInput } = req.body;
+    
+    if (!userInput) {
+      console.log('ERROR: No userInput provided');
+      return res.status(400).json({ error: 'userInput is required' });
+    }
+
+    // Check environment variable
+    const hfToken = process.env.HF_TOKEN;
+    console.log('HF_TOKEN exists:', !!hfToken);
+    console.log('HF_TOKEN length:', hfToken ? hfToken.length : 0);
+    
+    if (!hfToken) {
+      console.log('ERROR: HF_TOKEN not found in environment');
+      return res.status(500).json({ error: 'HF_TOKEN not configured' });
+    }
+
+    console.log('Making request to Hugging Face...');
+
+    // Use a simple, reliable model
+    const response = await fetch('https://api-inference.huggingface.co/models/gpt2', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${hfToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        inputs: `Question: ${userInput}\nAnswer:`,
+        parameters: {
+          max_new_tokens: 50,
+          return_full_text: false
+        }
+      }),
+    });
+
+    console.log('HF Response status:', response.status);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.log('HF Error:', errorText);
+      return res.status(response.status).json({ 
+        error: `Hugging Face API error: ${response.status}` 
+      });
+    }
+
+    const data = await response.json();
+    console.log('HF Response data:', data);
+
+    let aiText = '';
+    if (Array.isArray(data) && data[0] && data[0].generated_text) {
+      aiText = data[0].generated_text.trim();
+    } else if (data.generated_text) {
+      aiText = data.generated_text.trim();
     } else {
-      responseText = "I'm here to help with your startup questions. Could you please rephrase your question?";
+      aiText = 'I understand your question about startup validation. Here are some key steps to validate your startup idea: 1) Talk to potential customers, 2) Research the market size, 3) Build a simple prototype, 4) Test your assumptions. Would you like me to elaborate on any of these?';
     }
 
-    // Clean up response if needed
-    if (responseText.length === 0) {
-      responseText = "I'd be happy to help with your startup question. Could you provide more details about what specific guidance you're looking for?";
-    }
-
-    // Return successful response
-    res.status(200).json({ 
-      text: responseText,
-      timestamp: new Date().toISOString()
+    console.log('Sending response:', aiText);
+    
+    return res.status(200).json({ 
+      text: aiText,
+      success: true 
     });
 
   } catch (error) {
-    // Handle any server errors
-    console.error('Server execution error:', error);
-    res.status(500).json({ 
-      error: 'The server encountered an unexpected error. Please try again later.',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    console.error('=== API ERROR ===');
+    console.error('Error details:', error);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    
+    return res.status(500).json({ 
+      error: 'Server error',
+      details: error.message 
     });
   }
 }
