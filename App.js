@@ -52,8 +52,8 @@ const sampleData = {
                 "Digital health made simple"
             ],
             posts: [
-                "ðŸ¥ Skip the waiting room! Connect with quality healthcare from your home. Experience the future of medicine. #Telemedicine #Healthcare #Digital",
-                "ðŸ‘©â€âš•ï¸ Connect with trusted doctors instantly. Get consultations, prescriptions, and health monitoring in one platform. #HealthTech #Innovation",
+                "ðŸ ¥ Skip the waiting room! Connect with quality healthcare from your home. Experience the future of medicine. #Telemedicine #Healthcare #Digital",
+                "ðŸ‘©â€ âš•ï¸  Connect with trusted doctors instantly. Get consultations, prescriptions, and health monitoring in one platform. #HealthTech #Innovation",
                 "ðŸ’Š Managing your health has never been easier. Book appointments, track vitals, and stay connected with your care team. #DigitalHealth #WellBeing"
             ]
         },
@@ -84,7 +84,7 @@ const sampleData = {
             posts: [
                 "ðŸ’° Take control of your finances with intelligent money management. Start your journey to financial freedom! #FinTech #PersonalFinance",
                 "ðŸ“Š Smart investing made simple. Let AI help you make better financial decisions. #Investment #AI #Finance",
-                "ðŸ¦ Banking reimagined. Experience seamless, secure, and smart financial services. #DigitalBanking #Innovation"
+                "ðŸ ¦ Banking reimagined. Experience seamless, secure, and smart financial services. #DigitalBanking #Innovation"
             ]
         },
         "Education": {
@@ -242,7 +242,7 @@ function showToast(message, type = 'success') {
     const toast = document.getElementById('toast');
     if (toast) {
         toast.textContent = message;
-        toast.className = toast ${type};
+        toast.className = `toast ${type}`;
         toast.classList.add('show');
         
         setTimeout(() => {
@@ -264,39 +264,33 @@ function getRandomItems(array, count) {
     return shuffled.slice(0, count);
 }
 
-// Navigation Functions - Fixed and simplified
+// Navigation Functions
 function showPage(pageId) {
     console.log('Showing page:', pageId);
     
-    // Get all pages and nav links
     const pages = document.querySelectorAll('.page');
     const navLinks = document.querySelectorAll('.nav-link');
     
-    // Hide all pages
     pages.forEach(page => {
         page.classList.remove('active');
     });
     
-    // Remove active class from all nav links
     navLinks.forEach(link => {
         link.classList.remove('active');
     });
     
-    // Show target page
     const targetPage = document.getElementById(pageId);
     if (targetPage) {
         targetPage.classList.add('active');
         state.currentPage = pageId;
         
-        // Add active class to corresponding nav link
-        const activeLink = document.querySelector([data-page="${pageId}"]);
+        // **FIXED**: Corrected the selector syntax by wrapping it in backticks.
+        const activeLink = document.querySelector(`[data-page="${pageId}"]`);
         if (activeLink) {
             activeLink.classList.add('active');
         }
         
-        // Scroll to top
         window.scrollTo(0, 0);
-        
         console.log('Successfully navigated to:', pageId);
         return true;
     }
@@ -311,7 +305,7 @@ function addMessage(content, isUser = false) {
     if (!chatMessages) return;
     
     const messageDiv = document.createElement('div');
-    messageDiv.className = message ${isUser ? 'user-message' : 'ai-message'};
+    messageDiv.className = `message ${isUser ? 'user-message' : 'ai-message'}`;
     
     messageDiv.innerHTML = `
         <div class="message-content">
@@ -323,7 +317,6 @@ function addMessage(content, isUser = false) {
     chatMessages.appendChild(messageDiv);
     chatMessages.scrollTop = chatMessages.scrollHeight;
     
-    // Store in state
     state.chatMessages.push({
         content,
         isUser,
@@ -349,33 +342,46 @@ function hideChatLoading() {
     }
 }
 
-function simulateAIResponse(userMessage) {
+// **NEW**: Function to get a real response from the backend API
+async function getRealAIResponse(userMessage) {
     showChatLoading();
-    
-    setTimeout(() => {
-        hideChatLoading();
-        
-        let response;
-        const message = userMessage.toLowerCase();
-        
-        if (message.includes('funding') || message.includes('investment') || message.includes('money')) {
-            response = "Funding is important, but don't rush into it. Bootstrap if possible initially. Have you calculated how much funding you actually need to reach your next milestone? Consider angel investors, VCs, or crowdfunding based on your stage.";
-        } else if (message.includes('team') || message.includes('cofounder') || message.includes('hiring')) {
-            response = "Team building is essential. Look for co-founders who complement your skills. Do you have technical expertise, or do you need a technical co-founder? Start with people you trust and who share your vision.";
-        } else if (message.includes('mvp') || message.includes('product') || message.includes('build')) {
-            response = "Building a minimum viable product (MVP) is crucial. Start with the core features that solve your users' main problem. What's the primary pain point your startup addresses? Focus on solving one problem really well first.";
-        } else if (message.includes('marketing') || message.includes('customer') || message.includes('user')) {
-            response = "Customer acquisition is key. Start thinking about your marketing strategy. Who is your target audience and where can you reach them most effectively? Consider content marketing, social media, and direct outreach.";
-        } else if (message.includes('validate') || message.includes('idea') || message.includes('market')) {
-            response = "That's a great question! When starting a startup, it's important to validate your idea first. Have you conducted any market research or spoken to potential customers? Talk to at least 10 potential users before building anything.";
-        } else if (message.includes('website') || message.includes('web') || message.includes('online')) {
-            response = "Having a strong online presence is crucial for startups! A well-designed website builds credibility and helps you reach customers 24/7. Have you considered using our Website Generator? It can create a complete, functional website for your startup in just a few minutes.";
-        } else {
-            response = getRandomItem(sampleData.chatResponses);
+    const chatInput = document.getElementById('chatInput');
+    const sendButton = document.querySelector('.chat-send-btn');
+
+    // Disable input while fetching
+    if (chatInput) chatInput.disabled = true;
+    if (sendButton) sendButton.disabled = true;
+
+    try {
+        // This calls your API file located at /api/getAIResponse.js
+        const response = await fetch('/api/getAIResponse', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ userInput: userMessage }),
+        });
+
+        if (!response.ok) {
+            // Handle errors from the API
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'The AI mentor is unavailable right now.');
         }
-        
-        addMessage(response, false);
-    }, 1500 + Math.random() * 1000);
+
+        const data = await response.json();
+        addMessage(data.text, false); // Add the real AI response to the chat
+
+    } catch (error) {
+        console.error('API call failed:', error);
+        // Let the user know something went wrong
+        addMessage(`Sorry, I couldn't get a response. Error: ${error.message}`, false);
+    } finally {
+        hideChatLoading();
+        // Re-enable input
+        if (chatInput) chatInput.disabled = false;
+        if (sendButton) sendButton.disabled = false;
+        if (chatInput) chatInput.focus();
+    }
 }
 
 function initializeChat() {
@@ -391,7 +397,9 @@ function initializeChat() {
             
             addMessage(message, true);
             chatInput.value = '';
-            simulateAIResponse(message);
+            
+            // **UPDATED**: Call the real API function instead of the simulation
+            getRealAIResponse(message);
         });
     }
 
@@ -402,7 +410,9 @@ function initializeChat() {
             const suggestion = pill.getAttribute('data-suggestion');
             if (suggestion && chatInput) {
                 addMessage(suggestion, true);
-                simulateAIResponse(suggestion);
+                
+                // **UPDATED**: Call the real API function
+                getRealAIResponse(suggestion);
             }
         });
     });
@@ -654,7 +664,7 @@ function generateWebsite() {
         designStyle: step3.designStyle,
         logo: step3.logo,
         preview: sampleWebsite.preview.replace(/MediConnect|AgroAI|DevTools/g, step1.startupName),
-        url: https://${step1.startupName.toLowerCase().replace(/\s+/g, '-')}.com
+        url: `https://${step1.startupName.toLowerCase().replace(/\s+/g, '-')}.com`
     };
 }
 
@@ -689,8 +699,8 @@ function simulateGeneration() {
         
         // Update progress bar
         const progress = ((currentStage + 1) / totalStages) * 100;
-        if (progressBarFill) progressBarFill.style.width = ${progress}%;
-        if (progressText) progressText.textContent = ${Math.round(progress)}% Complete;
+        if (progressBarFill) progressBarFill.style.width = `${progress}%`;
+        if (progressText) progressText.textContent = `${Math.round(progress)}% Complete`;
         
         currentStage++;
         
@@ -735,15 +745,15 @@ function updateResultsDisplay(websiteData) {
     const backendListEl = document.getElementById('generatedBackendList');
     
     if (pagesListEl) {
-        pagesListEl.innerHTML = websiteData.pages.map(page => <li>${page}</li>).join('');
+        pagesListEl.innerHTML = websiteData.pages.map(page => `<li>${page}</li>`).join('');
     }
     
     if (featuresListEl) {
-        featuresListEl.innerHTML = websiteData.features.map(feature => <li>${feature}</li>).join('');
+        featuresListEl.innerHTML = websiteData.features.map(feature => `<li>${feature}</li>`).join('');
     }
     
     if (backendListEl) {
-        backendListEl.innerHTML = websiteData.backend.map(service => <li>${service}</li>).join('');
+        backendListEl.innerHTML = websiteData.backend.map(service => `<li>${service}</li>`).join('');
     }
     
     // Update website URL
@@ -781,10 +791,10 @@ function updateCodePreview(websiteData) {
         <nav class="navbar">
             <div class="container">
                 <div class="logo">
-                    ${websiteData.logo ? <img src="${websiteData.logo}" alt="${websiteData.name}"> : <h1>${websiteData.name}</h1>}
+                    ${websiteData.logo ? `<img src="${websiteData.logo}" alt="${websiteData.name}">` : `<h1>${websiteData.name}</h1>`}
                 </div>
                 <ul class="nav-menu">
-                    ${websiteData.pages.map(page => <li><a href="#${page.toLowerCase()}">${page}</a></li>).join('\n                    ')}
+                    ${websiteData.pages.map(page => `<li><a href="#${page.toLowerCase()}">${page}</a></li>`).join('\n                    ')}
                 </ul>
             </div>
         </nav>
