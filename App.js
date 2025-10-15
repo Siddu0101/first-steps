@@ -1270,3 +1270,4 @@ document.addEventListener('DOMContentLoaded', function() {
         showToast('Failed to load application. Please refresh the page.', 'error');
     }
 });
+
