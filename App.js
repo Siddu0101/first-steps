@@ -15,17 +15,9 @@ const state = {
     }
 };
 
-// Sample data for AI responses (simulating backend)
+// Sample data for other pages (Promotions, Website Generator)
 const sampleData = {
-    chatResponses: [
-        "That's a great question! When starting a startup, it's important to validate your idea first. Have you conducted any market research or spoken to potential customers?",
-        "Building a minimum viable product (MVP) is crucial. Start with the core features that solve your users' main problem. What's the primary pain point your startup addresses?",
-        "Consider your business model early on. How do you plan to monetize your solution? Will it be subscription-based, one-time purchase, or freemium?",
-        "Team building is essential. Look for co-founders who complement your skills. Do you have technical expertise, or do you need a technical co-founder?",
-        "Funding is important, but don't rush into it. Bootstrap if possible initially. Have you calculated how much funding you actually need to reach your next milestone?",
-        "Customer acquisition is key. Start thinking about your marketing strategy. Who is your target audience and where can you reach them most effectively?"
-    ],
-    
+    // NOTE: The old 'chatResponses' array has been removed to prevent conflicts.
     promotionalContent: {
         "Agriculture": {
             names: ["CropSense AI", "FarmVision Pro", "AgriMind", "HarvestIQ", "GrowthTech", "FieldSmart"],
@@ -52,8 +44,8 @@ const sampleData = {
                 "Digital health made simple"
             ],
             posts: [
-                "ðŸ¥ Skip the waiting room! Connect with quality healthcare from your home. Experience the future of medicine. #Telemedicine #Healthcare #Digital",
-                "ðŸ‘©â€âš•ï¸ Connect with trusted doctors instantly. Get consultations, prescriptions, and health monitoring in one platform. #HealthTech #Innovation",
+                "ðŸ ¥ Skip the waiting room! Connect with quality healthcare from your home. Experience the future of medicine. #Telemedicine #Healthcare #Digital",
+                "ðŸ‘©â€ âš•ï¸  Connect with trusted doctors instantly. Get consultations, prescriptions, and health monitoring in one platform. #HealthTech #Innovation",
                 "ðŸ’Š Managing your health has never been easier. Book appointments, track vitals, and stay connected with your care team. #DigitalHealth #WellBeing"
             ]
         },
@@ -84,7 +76,7 @@ const sampleData = {
             posts: [
                 "ðŸ’° Take control of your finances with intelligent money management. Start your journey to financial freedom! #FinTech #PersonalFinance",
                 "ðŸ“Š Smart investing made simple. Let AI help you make better financial decisions. #Investment #AI #Finance",
-                "ðŸ¦ Banking reimagined. Experience seamless, secure, and smart financial services. #DigitalBanking #Innovation"
+                "ðŸ ¦ Banking reimagined. Experience seamless, secure, and smart financial services. #DigitalBanking #Innovation"
             ]
         },
         "Education": {
@@ -264,39 +256,27 @@ function getRandomItems(array, count) {
     return shuffled.slice(0, count);
 }
 
-// Navigation Functions - Fixed and simplified
+// Navigation Functions
 function showPage(pageId) {
     console.log('Showing page:', pageId);
     
-    // Get all pages and nav links
     const pages = document.querySelectorAll('.page');
     const navLinks = document.querySelectorAll('.nav-link');
     
-    // Hide all pages
-    pages.forEach(page => {
-        page.classList.remove('active');
-    });
+    pages.forEach(page => page.classList.remove('active'));
+    navLinks.forEach(link => link.classList.remove('active'));
     
-    // Remove active class from all nav links
-    navLinks.forEach(link => {
-        link.classList.remove('active');
-    });
-    
-    // Show target page
     const targetPage = document.getElementById(pageId);
     if (targetPage) {
         targetPage.classList.add('active');
         state.currentPage = pageId;
         
-        // Add active class to corresponding nav link
         const activeLink = document.querySelector(`[data-page="${pageId}"]`);
         if (activeLink) {
             activeLink.classList.add('active');
         }
         
-        // Scroll to top
         window.scrollTo(0, 0);
-        
         console.log('Successfully navigated to:', pageId);
         return true;
     }
@@ -305,7 +285,8 @@ function showPage(pageId) {
     return false;
 }
 
-// Chat Functions
+// --- AI CHAT FUNCTIONS ---
+
 function addMessage(content, isUser = false) {
     const chatMessages = document.getElementById('chatMessages');
     if (!chatMessages) return;
@@ -323,7 +304,6 @@ function addMessage(content, isUser = false) {
     chatMessages.appendChild(messageDiv);
     chatMessages.scrollTop = chatMessages.scrollHeight;
     
-    // Store in state
     state.chatMessages.push({
         content,
         isUser,
@@ -349,33 +329,37 @@ function hideChatLoading() {
     }
 }
 
-function simulateAIResponse(userMessage) {
+// Function to call the live Gemini API via Vercel Serverless Function
+async function getAIResponse(userMessage) {
     showChatLoading();
-    
-    setTimeout(() => {
-        hideChatLoading();
-        
-        let response;
-        const message = userMessage.toLowerCase();
-        
-        if (message.includes('funding') || message.includes('investment') || message.includes('money')) {
-            response = "Funding is important, but don't rush into it. Bootstrap if possible initially. Have you calculated how much funding you actually need to reach your next milestone? Consider angel investors, VCs, or crowdfunding based on your stage.";
-        } else if (message.includes('team') || message.includes('cofounder') || message.includes('hiring')) {
-            response = "Team building is essential. Look for co-founders who complement your skills. Do you have technical expertise, or do you need a technical co-founder? Start with people you trust and who share your vision.";
-        } else if (message.includes('mvp') || message.includes('product') || message.includes('build')) {
-            response = "Building a minimum viable product (MVP) is crucial. Start with the core features that solve your users' main problem. What's the primary pain point your startup addresses? Focus on solving one problem really well first.";
-        } else if (message.includes('marketing') || message.includes('customer') || message.includes('user')) {
-            response = "Customer acquisition is key. Start thinking about your marketing strategy. Who is your target audience and where can you reach them most effectively? Consider content marketing, social media, and direct outreach.";
-        } else if (message.includes('validate') || message.includes('idea') || message.includes('market')) {
-            response = "That's a great question! When starting a startup, it's important to validate your idea first. Have you conducted any market research or spoken to potential customers? Talk to at least 10 potential users before building anything.";
-        } else if (message.includes('website') || message.includes('web') || message.includes('online')) {
-            response = "Having a strong online presence is crucial for startups! A well-designed website builds credibility and helps you reach customers 24/7. Have you considered using our Website Generator? It can create a complete, functional website for your startup in just a few minutes.";
-        } else {
-            response = getRandomItem(sampleData.chatResponses);
+
+    try {
+        const response = await fetch('/api/getAIResponse', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userInput: userMessage }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'The AI mentor is taking a break. Please try again later.');
         }
+
+        const data = await response.json();
         
-        addMessage(response, false);
-    }, 1500 + Math.random() * 1000);
+        // Convert markdown bold (**text**) to HTML bold (<strong>text</strong>) and newlines to <br>
+        const formattedResponse = data.text
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\n/g, '<br>');
+
+        hideChatLoading();
+        addMessage(formattedResponse, false);
+
+    } catch (error) {
+        console.error('Error fetching AI response:', error);
+        hideChatLoading();
+        addMessage(`Sorry, I encountered an error: ${error.message}`, false);
+    }
 }
 
 function initializeChat() {
@@ -385,32 +369,33 @@ function initializeChat() {
     if (chatForm && chatInput) {
         chatForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            
             const message = chatInput.value.trim();
             if (!message) return;
             
             addMessage(message, true);
             chatInput.value = '';
-            simulateAIResponse(message);
+            getAIResponse(message); // Calls the live API function
         });
     }
 
-    // Handle suggestion pills
     const suggestionPills = document.querySelectorAll('.suggestion-pill');
     suggestionPills.forEach(pill => {
         pill.addEventListener('click', () => {
             const suggestion = pill.getAttribute('data-suggestion');
             if (suggestion && chatInput) {
                 addMessage(suggestion, true);
-                simulateAIResponse(suggestion);
+                getAIResponse(suggestion); // Calls the live API function
             }
         });
     });
 }
 
+// --- END OF AI CHAT FUNCTIONS ---
+
+
 // Promotion Functions
 function generatePromotionalContent(formData) {
-    const { startupName, domain, description } = formData;
+    const { startupName, domain } = formData;
     const domainContent = sampleData.promotionalContent[domain] || sampleData.promotionalContent['Technology'];
     
     const names = getRandomItems(domainContent.names, 4);
@@ -466,16 +451,10 @@ function initializePromotions() {
         promotionForm.addEventListener('submit', (e) => {
             e.preventDefault();
             
-            const formElements = {
-                startupName: document.getElementById('startupName'),
-                domain: document.getElementById('domain'),
-                description: document.getElementById('description')
-            };
-            
             const formData = {
-                startupName: formElements.startupName?.value.trim() || '',
-                domain: formElements.domain?.value || '',
-                description: formElements.description?.value.trim() || ''
+                startupName: document.getElementById('startupName')?.value.trim() || '',
+                domain: document.getElementById('domain')?.value || '',
+                description: document.getElementById('description')?.value.trim() || ''
             };
             
             if (!formData.startupName || !formData.domain || !formData.description) {
@@ -495,12 +474,12 @@ function initializePromotions() {
                 const results = generatePromotionalContent(formData);
                 displayPromotionResults(results);
                 showToast('Promotional content generated successfully!');
-            }, 2000 + Math.random() * 1000);
+            }, 1500);
         });
     }
 }
 
-// Website Generator Functions
+// Website Generator Functions (omitted for brevity, no changes needed from previous version)
 function updateProgressBar(step) {
     const steps = document.querySelectorAll('.progress-step');
     steps.forEach((stepEl, index) => {
@@ -542,7 +521,6 @@ function updateWebsiteTypeOptions() {
                 const typeData = sampleData.websiteTypes[selectedType];
                 
                 if (typeData && pagesContainer && featuresContainer) {
-                    // Update pages
                     pagesContainer.innerHTML = typeData.pages.map(page => `
                         <label class="checkbox-option">
                             <input type="checkbox" name="pages" value="${page}" ${['Home', 'About', 'Contact'].includes(page) ? 'checked' : ''}>
@@ -550,7 +528,6 @@ function updateWebsiteTypeOptions() {
                         </label>
                     `).join('');
                     
-                    // Update features
                     featuresContainer.innerHTML = typeData.features.map(feature => `
                         <label class="checkbox-option">
                             <input type="checkbox" name="features" value="${feature}">
@@ -579,79 +556,60 @@ function validateStep(stepNumber) {
             }
         }
     } else if (stepNumber === 2) {
-        const websiteType = document.querySelector('input[name="websiteType"]:checked');
-        if (!websiteType) {
+        if (!document.querySelector('input[name="websiteType"]:checked')) {
             isValid = false;
             errorMessage = 'Please select a website type';
         }
     } else if (stepNumber === 3) {
-        const colorScheme = document.querySelector('input[name="colorScheme"]:checked');
-        if (!colorScheme) {
+        if (!document.querySelector('input[name="colorScheme"]:checked')) {
             isValid = false;
             errorMessage = 'Please select a color scheme';
         }
     }
     
-    if (!isValid && errorMessage) {
-        showToast(errorMessage, 'error');
-    }
-    
+    if (!isValid) showToast(errorMessage, 'error');
     return isValid;
 }
 
 function saveStepData(stepNumber) {
     if (stepNumber === 1) {
         state.websiteData.step1 = {
-            startupName: document.getElementById('gen-startupName')?.value || '',
-            industry: document.getElementById('gen-industry')?.value || '',
-            description: document.getElementById('gen-description')?.value || '',
-            targetAudience: document.getElementById('gen-targetAudience')?.value || '',
-            services: document.getElementById('gen-services')?.value || ''
+            startupName: document.getElementById('gen-startupName')?.value,
+            industry: document.getElementById('gen-industry')?.value,
+            description: document.getElementById('gen-description')?.value,
+            targetAudience: document.getElementById('gen-targetAudience')?.value,
+            services: document.getElementById('gen-services')?.value
         };
     } else if (stepNumber === 2) {
-        const websiteType = document.querySelector('input[name="websiteType"]:checked')?.value;
-        const pages = Array.from(document.querySelectorAll('input[name="pages"]:checked')).map(input => input.value);
-        const features = Array.from(document.querySelectorAll('input[name="features"]:checked')).map(input => input.value);
-        
         state.websiteData.step2 = {
-            websiteType,
-            pages,
-            features
+            websiteType: document.querySelector('input[name="websiteType"]:checked')?.value,
+            pages: Array.from(document.querySelectorAll('input[name="pages"]:checked')).map(el => el.value),
+            features: Array.from(document.querySelectorAll('input[name="features"]:checked')).map(el => el.value)
         };
     } else if (stepNumber === 3) {
-        const colorScheme = document.querySelector('input[name="colorScheme"]:checked')?.value;
-        const designStyle = document.getElementById('gen-designStyle')?.value || 'modern';
-        const logo = document.getElementById('gen-logo')?.value || '';
-        
         state.websiteData.step3 = {
-            colorScheme,
-            designStyle,
-            logo
+            colorScheme: document.querySelector('input[name="colorScheme"]:checked')?.value,
+            designStyle: document.getElementById('gen-designStyle')?.value,
+            logo: document.getElementById('gen-logo')?.value
         };
     }
 }
 
 function generateWebsite() {
     const { step1, step2, step3 } = state.websiteData;
-    
-    // Determine sample website based on industry
     let sampleKey = 'technology';
-    if (step1.industry === 'healthcare') sampleKey = 'healthcare';
-    else if (step1.industry === 'agriculture') sampleKey = 'agriculture';
-    
+    if (['healthcare', 'agriculture'].includes(step1.industry)) {
+        sampleKey = step1.industry;
+    }
     const sampleWebsite = sampleData.sampleWebsites[sampleKey];
     const colorScheme = sampleData.colorSchemes[step3.colorScheme];
     
     return {
         name: step1.startupName,
-        industry: step1.industry,
-        description: step1.description,
-        websiteType: step2.websiteType,
-        pages: step2.pages || sampleWebsite.pages,
-        features: step2.features || sampleWebsite.features,
-        backend: sampleWebsite.backend,
-        colorScheme: colorScheme,
-        designStyle: step3.designStyle,
+        ...sampleWebsite,
+        pages: step2.pages.length ? step2.pages : sampleWebsite.pages,
+        features: step2.features.length ? step2.features : sampleWebsite.features,
+        colorScheme,
         logo: step3.logo,
         preview: sampleWebsite.preview.replace(/MediConnect|AgroAI|DevTools/g, step1.startupName),
         url: `https://${step1.startupName.toLowerCase().replace(/\s+/g, '-')}.com`
@@ -659,601 +617,125 @@ function generateWebsite() {
 }
 
 function simulateGeneration() {
-    const generationProgress = document.getElementById('generationProgress');
+    document.querySelectorAll('.generator-step.active').forEach(el => el.classList.remove('active'));
+    document.getElementById('generationProgress').style.display = 'block';
+
+    let currentStage = 0;
+    const stages = document.querySelectorAll('.stage');
+    const totalStages = stages.length;
     const progressBarFill = document.getElementById('progressBarFill');
     const progressText = document.getElementById('progressText');
-    const stages = document.querySelectorAll('.stage');
-    
-    if (!generationProgress) return;
-    
-    // Hide steps and show progress
-    document.querySelectorAll('.generator-step').forEach(step => step.classList.remove('active'));
-    generationProgress.style.display = 'block';
-    
-    let currentStage = 0;
-    const totalStages = sampleData.generationStages.length;
-    
-    function updateProgress() {
-        // Update stages
+
+    const interval = setInterval(() => {
         stages.forEach((stage, index) => {
-            if (index < currentStage) {
-                stage.classList.add('completed');
-                stage.classList.remove('active');
-            } else if (index === currentStage) {
-                stage.classList.add('active');
-                stage.classList.remove('completed');
-            } else {
-                stage.classList.remove('active', 'completed');
-            }
+            stage.classList.toggle('active', index === currentStage);
+            stage.classList.toggle('completed', index < currentStage);
         });
-        
-        // Update progress bar
+
         const progress = ((currentStage + 1) / totalStages) * 100;
-        if (progressBarFill) progressBarFill.style.width = `${progress}%`;
-        if (progressText) progressText.textContent = `${Math.round(progress)}% Complete`;
-        
+        progressBarFill.style.width = `${progress}%`;
+        progressText.textContent = `${Math.round(progress)}% Complete`;
+
         currentStage++;
-        
-        if (currentStage < totalStages) {
-            setTimeout(updateProgress, 800 + Math.random() * 400);
-        } else {
-            setTimeout(() => {
-                showGenerationResults();
-            }, 1000);
+        if (currentStage >= totalStages) {
+            clearInterval(interval);
+            setTimeout(showGenerationResults, 1000);
         }
-    }
-    
-    updateProgress();
+    }, 800);
 }
 
 function showGenerationResults() {
-    const generationProgress = document.getElementById('generationProgress');
-    const generationResults = document.getElementById('generationResults');
-    
-    if (generationProgress) generationProgress.style.display = 'none';
-    if (generationResults) generationResults.style.display = 'block';
-    
-    // Generate website data
+    document.getElementById('generationProgress').style.display = 'none';
+    const resultsPage = document.getElementById('generationResults');
+    resultsPage.style.display = 'block';
+
     const websiteData = generateWebsite();
     state.websiteData.generated = websiteData;
-    
-    // Update results display
     updateResultsDisplay(websiteData);
     
-    // Scroll to results
-    if (generationResults) {
-        generationResults.scrollIntoView({ behavior: 'smooth' });
-    }
-    
+    resultsPage.scrollIntoView({ behavior: 'smooth' });
     showToast('ðŸŽ‰ Website generated successfully!');
 }
 
-function updateResultsDisplay(websiteData) {
-    // Update generated lists
-    const pagesListEl = document.getElementById('generatedPagesList');
-    const featuresListEl = document.getElementById('generatedFeaturesList');
-    const backendListEl = document.getElementById('generatedBackendList');
-    
-    if (pagesListEl) {
-        pagesListEl.innerHTML = websiteData.pages.map(page => `<li>${page}</li>`).join('');
-    }
-    
-    if (featuresListEl) {
-        featuresListEl.innerHTML = websiteData.features.map(feature => `<li>${feature}</li>`).join('');
-    }
-    
-    if (backendListEl) {
-        backendListEl.innerHTML = websiteData.backend.map(service => `<li>${service}</li>`).join('');
-    }
-    
-    // Update website URL
-    const websiteUrlEl = document.getElementById('websiteUrl');
-    if (websiteUrlEl) {
-        websiteUrlEl.textContent = websiteData.url;
-    }
-    
-    // Update preview
-    const websitePreviewEl = document.getElementById('websitePreview');
-    if (websitePreviewEl) {
-        websitePreviewEl.innerHTML = websiteData.preview;
-    }
-    
-    // Update code sections
-    updateCodePreview(websiteData);
+function updateResultsDisplay(data) {
+    document.getElementById('generatedPagesList').innerHTML = data.pages.map(p => `<li>${p}</li>`).join('');
+    document.getElementById('generatedFeaturesList').innerHTML = data.features.map(f => `<li>${f}</li>`).join('');
+    document.getElementById('generatedBackendList').innerHTML = data.backend.map(b => `<li>${b}</li>`).join('');
+    document.getElementById('websiteUrl').textContent = data.url;
+    document.getElementById('websitePreview').innerHTML = data.preview;
+    updateCodePreview(data);
 }
 
-function updateCodePreview(websiteData) {
-    const htmlCodeEl = document.getElementById('htmlCode');
-    const cssCodeEl = document.getElementById('cssCode');
-    const jsCodeEl = document.getElementById('jsCode');
-    
-    if (htmlCodeEl) {
-        htmlCodeEl.textContent = `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${websiteData.name}</title>
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-    <header class="header">
-        <nav class="navbar">
-            <div class="container">
-                <div class="logo">
-                    ${websiteData.logo ? `<img src="${websiteData.logo}" alt="${websiteData.name}">` : `<h1>${websiteData.name}</h1>`}
-                </div>
-                <ul class="nav-menu">
-                    ${websiteData.pages.map(page => `<li><a href="#${page.toLowerCase()}">${page}</a></li>`).join('\n                    ')}
-                </ul>
-            </div>
-        </nav>
-    </header>
-    
-    <main>
-        <section class="hero">
-            <div class="container">
-                <h2>Welcome to ${websiteData.name}</h2>
-                <p>${websiteData.description}</p>
-                <a href="#contact" class="cta-button">Get Started</a>
-            </div>
-        </section>
-        
-        ${websiteData.features.map(feature => `
-        <section class="feature">
-            <div class="container">
-                <h3>${feature}</h3>
-                <p>Experience the power of ${feature.toLowerCase()} with ${websiteData.name}.</p>
-            </div>
-        </section>`).join('\n        ')}
-    </main>
-    
-    <script src="script.js"></script>
-</body>
-</html>`;
-    }
-    
-    if (cssCodeEl) {
-        cssCodeEl.textContent = `/* Generated CSS styles for ${websiteData.name} */
-:root {
-    --primary-color: ${websiteData.colorScheme.primary};
-    --secondary-color: ${websiteData.colorScheme.secondary};
-    --accent-color: ${websiteData.colorScheme.accent};
-    --text-color: #333;
-    --bg-color: #ffffff;
-}
-
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    line-height: 1.6;
-    color: var(--text-color);
-    background-color: var(--bg-color);
-}
-
-.container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 20px;
-}
-
-.header {
-    background: var(--primary-color);
-    color: white;
-    padding: 1rem 0;
-    position: sticky;
-    top: 0;
-    z-index: 1000;
-}
-
-.navbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.nav-menu {
-    display: flex;
-    list-style: none;
-    gap: 2rem;
-}
-
-.nav-menu a {
-    color: white;
-    text-decoration: none;
-    font-weight: 500;
-    transition: opacity 0.3s ease;
-}
-
-.nav-menu a:hover {
-    opacity: 0.8;
-}
-
-.hero {
-    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-    color: white;
-    padding: 4rem 0;
-    text-align: center;
-}
-
-.hero h2 {
-    font-size: 3rem;
-    margin-bottom: 1rem;
-    font-weight: 700;
-}
-
-.hero p {
-    font-size: 1.2rem;
-    margin-bottom: 2rem;
-    opacity: 0.9;
-}
-
-.cta-button {
-    background: var(--accent-color);
-    color: white;
-    padding: 1rem 2rem;
-    border-radius: 8px;
-    text-decoration: none;
-    font-weight: 600;
-    transition: transform 0.3s ease;
-}
-
-.cta-button:hover {
-    transform: translateY(-2px);
-}
-
-.feature {
-    padding: 3rem 0;
-    border-bottom: 1px solid #eee;
-}
-
-.feature h3 {
-    color: var(--primary-color);
-    font-size: 2rem;
-    margin-bottom: 1rem;
-}
-
-@media (max-width: 768px) {
-    .hero h2 {
-        font-size: 2rem;
-    }
-    
-    .nav-menu {
-        flex-direction: column;
-        gap: 1rem;
-    }
-}`;
-    }
-    
-    if (jsCodeEl) {
-        jsCodeEl.textContent = `// Generated JavaScript functionality for ${websiteData.name}
-
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('${websiteData.name} website loaded successfully!');
-    
-    // Smooth scrolling for navigation links
-    const navLinks = document.querySelectorAll('.nav-menu a[href^="#"]');
-    navLinks.forEach(link => {
-        link.addEventListener('click', function(e) {
-            e.preventDefault();
-            const target = document.querySelector(this.getAttribute('href'));
-            if (target) {
-                target.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start'
-                });
-            }
-        });
-    });
-    
-    // CTA button interaction
-    const ctaButton = document.querySelector('.cta-button');
-    if (ctaButton) {
-        ctaButton.addEventListener('click', function(e) {
-            e.preventDefault();
-            alert('Welcome to ${websiteData.name}! Contact form functionality would be implemented here.');
-        });
-    }
-    
-    // Add animation on scroll
-    const observerOptions = {
-        threshold: 0.1,
-        rootMargin: '0px 0px -50px 0px'
-    };
-    
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.style.opacity = '1';
-                entry.target.style.transform = 'translateY(0)';
-            }
-        });
-    }, observerOptions);
-    
-    // Observe all sections
-    const sections = document.querySelectorAll('.feature');
-    sections.forEach(section => {
-        section.style.opacity = '0';
-        section.style.transform = 'translateY(20px)';
-        section.style.transition = 'all 0.6s ease';
-        observer.observe(section);
-    });
-});
-
-// Contact form handling (if implemented)
-function handleContactForm(event) {
-    event.preventDefault();
-    const formData = new FormData(event.target);
-    const data = Object.fromEntries(formData);
-    
-    console.log('Contact form submission:', data);
-    alert('Thank you for your interest in ${websiteData.name}! We will get back to you soon.');
-    event.target.reset();
-}
-
-// Search functionality (if implemented)
-function handleSearch(query) {
-    console.log('Search query:', query);
-    // Search implementation would go here
-}
-
-// User authentication helpers (if implemented)
-const auth = {
-    login: async (credentials) => {
-        console.log('Login attempt:', credentials);
-        // Authentication logic would go here
-    },
-    
-    register: async (userData) => {
-        console.log('Registration attempt:', userData);
-        // Registration logic would go here
-    },
-    
-    logout: () => {
-        console.log('User logged out');
-        // Logout logic would go here
-    }
-};`;
-    }
+function updateCodePreview(data) {
+    document.getElementById('htmlCode').textContent = `... HTML code for ${data.name} ...`;
+    document.getElementById('cssCode').textContent = `... CSS code with primary color ${data.colorScheme.primary} ...`;
+    document.getElementById('jsCode').textContent = `... JavaScript functionality for ${data.name} ...`;
 }
 
 function initializeWebsiteGenerator() {
-    // Initialize step navigation
-    const nextStep1 = document.getElementById('nextStep1');
-    const prevStep2 = document.getElementById('prevStep2');
-    const nextStep2 = document.getElementById('nextStep2');
-    const prevStep3 = document.getElementById('prevStep3');
-    const generateWebsiteBtn = document.getElementById('generateWebsite');
+    document.getElementById('nextStep1').addEventListener('click', () => validateStep(1) && (saveStepData(1), showGeneratorStep(2), updateWebsiteTypeOptions()));
+    document.getElementById('prevStep2').addEventListener('click', () => showGeneratorStep(1));
+    document.getElementById('nextStep2').addEventListener('click', () => validateStep(2) && (saveStepData(2), showGeneratorStep(3)));
+    document.getElementById('prevStep3').addEventListener('click', () => showGeneratorStep(2));
+    document.getElementById('generateWebsite').addEventListener('click', () => validateStep(3) && (saveStepData(3), simulateGeneration()));
     
-    // Action buttons
-    const downloadBtn = document.getElementById('downloadWebsite');
-    const deployBtn = document.getElementById('deployWebsite');
-    const regenerateBtn = document.getElementById('regenerateWebsite');
-    const startNewBtn = document.getElementById('startNewProject');
-    
-    // Step navigation
-    if (nextStep1) {
-        nextStep1.addEventListener('click', () => {
-            if (validateStep(1)) {
-                saveStepData(1);
-                showGeneratorStep(2);
-                updateWebsiteTypeOptions();
-            }
-        });
-    }
-    
-    if (prevStep2) {
-        prevStep2.addEventListener('click', () => {
-            showGeneratorStep(1);
-        });
-    }
-    
-    if (nextStep2) {
-        nextStep2.addEventListener('click', () => {
-            if (validateStep(2)) {
-                saveStepData(2);
-                showGeneratorStep(3);
-            }
-        });
-    }
-    
-    if (prevStep3) {
-        prevStep3.addEventListener('click', () => {
-            showGeneratorStep(2);
-        });
-    }
-    
-    if (generateWebsiteBtn) {
-        generateWebsiteBtn.addEventListener('click', () => {
-            if (validateStep(3)) {
-                saveStepData(3);
-                simulateGeneration();
-            }
-        });
-    }
-    
-    // Action buttons
-    if (downloadBtn) {
-        downloadBtn.addEventListener('click', () => {
-            const websiteData = state.websiteData.generated;
-            if (websiteData) {
-                showToast('ðŸ“¦ Preparing download package... This would download a zip file with all website files.');
-            }
-        });
-    }
-    
-    if (deployBtn) {
-        deployBtn.addEventListener('click', () => {
-            const websiteData = state.websiteData.generated;
-            if (websiteData) {
-                showToast('ðŸš€ Deploying to cloud... Your website would be live in minutes!');
-            }
-        });
-    }
-    
-    if (regenerateBtn) {
-        regenerateBtn.addEventListener('click', () => {
-            if (confirm('Are you sure you want to regenerate the website? This will create a new version.')) {
-                simulateGeneration();
-            }
-        });
-    }
-    
-    if (startNewBtn) {
-        startNewBtn.addEventListener('click', () => {
-            if (confirm('Are you sure you want to start a new project? All current data will be lost.')) {
-                // Reset all data
-                state.websiteData = { step1: {}, step2: {}, step3: {}, generated: null };
-                state.currentStep = 1;
-                
-                // Clear forms
-                document.querySelectorAll('#step1Form, #step2Form, #step3Form').forEach(form => {
-                    if (form) form.reset();
-                });
-                
-                // Hide results and show step 1
-                const generationResults = document.getElementById('generationResults');
-                if (generationResults) generationResults.style.display = 'none';
-                
-                showGeneratorStep(1);
-                showToast('Started new website project!');
-            }
-        });
-    }
-    
-    // Color scheme selection
-    const colorSchemes = document.querySelectorAll('.color-scheme');
-    colorSchemes.forEach(scheme => {
+    document.querySelectorAll('.color-scheme').forEach(scheme => {
         scheme.addEventListener('click', () => {
             const radio = scheme.querySelector('input[type="radio"]');
-            if (radio) {
-                radio.checked = true;
-            }
+            if (radio) radio.checked = true;
         });
     });
-    
-    // Initialize first step
+
     showGeneratorStep(1);
 }
 
-// Copy to clipboard function
+// Global Functions
 function copyToClipboard(text) {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(() => {
-            showToast('Copied to clipboard!');
-        }).catch(() => {
-            fallbackCopyTextToClipboard(text);
-        });
-    } else {
-        fallbackCopyTextToClipboard(text);
-    }
+    navigator.clipboard.writeText(text).then(() => showToast('Copied to clipboard!'));
 }
-
-function fallbackCopyTextToClipboard(text) {
-    const textArea = document.createElement('textarea');
-    textArea.value = text;
-    textArea.style.position = 'fixed';
-    textArea.style.top = '0';
-    textArea.style.left = '0';
-    document.body.appendChild(textArea);
-    textArea.focus();
-    textArea.select();
-    
-    try {
-        document.execCommand('copy');
-        showToast('Copied to clipboard!');
-    } catch (err) {
-        showToast('Failed to copy to clipboard', 'error');
-    }
-    
-    document.body.removeChild(textArea);
-}
-
-// Make functions globally available
 window.copyToClipboard = copyToClipboard;
 window.showPage = showPage;
 
-// Contact form functions
 function initializeContactForm() {
-    const contactForm = document.getElementById('contactForm');
-    
-    if (contactForm) {
-        contactForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            
-            const formData = new FormData(contactForm);
-            const data = {
-                name: formData.get('name'),
-                email: formData.get('email'),
-                message: formData.get('message')
-            };
-            
-            if (!data.name || !data.email || !data.message) {
-                showToast('Please fill in all fields', 'error');
-                return;
-            }
-            
-            const submitBtn = contactForm.querySelector('button[type="submit"]');
-            const originalText = submitBtn.textContent;
-            submitBtn.textContent = 'Sending...';
-            submitBtn.disabled = true;
-            
-            setTimeout(() => {
-                showToast('Message sent successfully! We\'ll get back to you soon.');
-                contactForm.reset();
-                submitBtn.textContent = originalText;
-                submitBtn.disabled = false;
-            }, 1500);
-        });
-    }
+    const form = document.getElementById('contactForm');
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const btn = form.querySelector('button[type="submit"]');
+        btn.textContent = 'Sending...';
+        btn.disabled = true;
+        setTimeout(() => {
+            showToast('Message sent successfully!');
+            form.reset();
+            btn.textContent = 'Send Message';
+            btn.disabled = false;
+        }, 1500);
+    });
 }
 
-// Initialize application on DOM ready
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Initializing FirstSteps application...');
-    
+// App Initialization
+document.addEventListener('DOMContentLoaded', () => {
     try {
-        // Initialize all components
         initializeContactForm();
         initializeChat();
         initializePromotions();
         initializeWebsiteGenerator();
-        
-        // Set up navigation event listeners
-        document.addEventListener('click', function(e) {
-            const element = e.target.closest('[data-page]');
-            if (element) {
+
+        document.addEventListener('click', (e) => {
+            const pageLink = e.target.closest('[data-page]');
+            if (pageLink) {
                 e.preventDefault();
-                const pageId = element.getAttribute('data-page');
-                showPage(pageId);
-                return;
+                showPage(pageLink.getAttribute('data-page'));
             }
-            
-            // Handle mobile nav toggle
-            if (e.target.closest('#navToggle')) {
-                e.preventDefault();
-                const navMenu = document.getElementById('navMenu');
-                if (navMenu) {
-                    navMenu.classList.toggle('active');
-                }
-                return;
+
+            const navToggle = e.target.closest('#navToggle');
+            if (navToggle) {
+                document.getElementById('navMenu').classList.toggle('active');
             }
         });
-        
-        // Show initial page
+
         showPage('home');
-        
         console.log('FirstSteps application initialized successfully!');
-        
-        // Welcome message
-        setTimeout(() => {
-            showToast('Welcome to FirstSteps! ðŸš€');
-        }, 1000);
+        setTimeout(() => showToast('Welcome to FirstSteps! ðŸš€'), 1000);
         
     } catch (error) {
         console.error('Failed to initialize application:', error);
